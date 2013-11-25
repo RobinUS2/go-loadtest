@@ -25,12 +25,14 @@ var urlQueue chan string
 var finished chan bool
 var timeoutTime int
 var waitToFinish bool
+var reportInterval int
 
 // Counters
 var startCounter int = int(0)
-var startCounterMux sync.Mutex
 var doneCounter int = int(0)
 var doneCounterMux sync.Mutex
+var errorCounter int = int(0)
+var errorCounterMux sync.Mutex
 
 // Init settings
 func init() {
@@ -68,11 +70,21 @@ func requester() {
             //log.Println(url)
             resp, err := httpclient.Get(url)
             if err != nil {
-                // @todo Error count
+                // Count error
+                errorCounterMux.Lock()
+                errorCounter++
+                errorCounterMux.Unlock()
             } else {
-                // @todo Succes count
                 defer resp.Body.Close()
             }
+
+            // Count finished
+            doneCounterMux.Lock()
+            doneCounter++
+            if doneCounter % reportInterval == 0 {
+                printProgress()
+            }
+            doneCounterMux.Unlock()
 
             // Done?
             if waitToFinish && len(urlQueue) == 0 {
@@ -80,6 +92,20 @@ func requester() {
             }
         }
     }()
+}
+
+// Progress
+func printProgress() {
+    log.Printf("Finished %d requests", doneCounter)
+}
+
+// Summary
+func printSummary() {
+    log.Printf("----- SUMMARY -----")
+    log.Printf("Total %d requests", doneCounter)
+    log.Printf("Successful %d requests", doneCounter - errorCounter)
+    log.Printf("Failed %d requests", errorCounter)
+    log.Printf("-------------------")
 }
 
 // Parse url
@@ -113,6 +139,7 @@ func main() {
     urlQueue = make(chan string, requests)
     finished = make(chan bool, 1)
     waitToFinish = false
+    reportInterval = requests / 10
 
     // Use all cores
     runtime.GOMAXPROCS(256)
@@ -126,6 +153,14 @@ func main() {
         urls[elmSplit[1]] = weight
     }
 
+    // Settings
+    log.Printf("Located %d urls\n", len(urls))
+    log.Printf("Concurrency is %d client(s)\n", concurrency)
+    log.Printf("Amount of requests %d\n", requests)
+
+    // Start
+    log.Println("Starting loadtest")
+
     // Filling queue
     urlProducer()
 
@@ -136,5 +171,7 @@ func main() {
 
     // Wait
     <-finished
+    printProgress()
+    printSummary()
     log.Println("Done")
 }
