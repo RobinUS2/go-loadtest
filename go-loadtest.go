@@ -13,6 +13,7 @@ import (
     "net"
     "net/http"
     "math/rand"
+    "sync"
 )
 
 // Variables
@@ -23,6 +24,13 @@ var urls map[string]int
 var urlQueue chan string
 var finished chan bool
 var timeoutTime int
+var waitToFinish bool
+
+// Counters
+var startCounter int = int(0)
+var startCounterMux sync.Mutex
+var doneCounter int = int(0)
+var doneCounterMux sync.Mutex
 
 // Init settings
 func init() {
@@ -57,13 +65,18 @@ func requester() {
             url = parseUrl(url)
 
             // Request
-            log.Println(url)
+            //log.Println(url)
             resp, err := httpclient.Get(url)
             if err != nil {
                 // @todo Error count
             } else {
                 // @todo Succes count
                 defer resp.Body.Close()
+            }
+
+            // Done?
+            if waitToFinish && len(urlQueue) == 0 {
+                finished <- true
             }
         }
     }()
@@ -82,6 +95,13 @@ func urlProducer() {
             // @todo Support weight
             for url,_ := range urls {
                 urlQueue <- url
+                startCounter++
+            }
+            // Stop when we have enough populated
+            if startCounter >= requests {
+                waitToFinish = true
+                log.Printf("%d request are enqueued\n", requests)
+                break
             }
         }
     }()
@@ -92,6 +112,7 @@ func main() {
     // Queue
     urlQueue = make(chan string, requests)
     finished = make(chan bool, 1)
+    waitToFinish = false
 
     // Use all cores
     runtime.GOMAXPROCS(256)
