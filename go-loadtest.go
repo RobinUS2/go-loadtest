@@ -126,7 +126,7 @@ func urlProducer() {
             // Stop when we have enough populated
             if startCounter >= requests {
                 waitToFinish = true
-                log.Printf("%d request are enqueued\n", requests)
+                //log.Printf("%d request are enqueued\n", requests)
                 break
             }
         }
@@ -167,9 +167,11 @@ func main() {
     log.Printf("Located %d urls\n", len(urls))
     log.Printf("Concurrency is %d client(s)\n", concurrency)
     log.Printf("Amount of requests %d\n", requests)
+    log.Printf("Maximum response time %d second(s)\n", timeoutTime)
 
     // Start
     log.Println("Starting loadtest")
+    log.Println("-------------------")
 
     // Filling queue
     urlProducer()
