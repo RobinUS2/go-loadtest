@@ -133,8 +133,18 @@ func urlProducer() {
     }()
 }
 
+// Info
+func printInfo() {
+    log.Println("Starting go-loadtest")
+    log.Println("Documentation: https://github.com/RobinUS2/go-loadtest")
+    log.Println("-------------------")
+}
+
 // Main
 func main() {
+    // Info
+    printInfo()
+
     // Queue
     urlQueue = make(chan string, requests)
     finished = make(chan bool, 1)
@@ -173,5 +183,5 @@ func main() {
     <-finished
     printProgress()
     printSummary()
-    log.Println("Done")
+    log.Println("Done go-loadtest")
 }
