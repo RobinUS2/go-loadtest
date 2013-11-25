@@ -87,7 +87,7 @@ func requester() {
             doneCounterMux.Unlock()
 
             // Done?
-            if waitToFinish && len(urlQueue) == 0 {
+            if waitToFinish && len(urlQueue) == 0 && doneCounter >= startCounter {
                 finished <- true
             }
         }
