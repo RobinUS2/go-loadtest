@@ -26,6 +26,7 @@ var finished chan bool
 var timeoutTime int
 var waitToFinish bool
 var reportInterval int
+var cpuCount int = runtime.NumCPU()
 
 // Counters
 var startCounter int = int(0)
@@ -37,7 +38,7 @@ var errorCounterMux sync.Mutex
 // Init settings
 func init() {
     flag.StringVar(&urlsIn, "urls", "", "Urls to benchmark")
-    flag.IntVar(&concurrency, "c", 50, "Concurrency")
+    flag.IntVar(&concurrency, "c", 8*cpuCount, "Concurrency")
     flag.IntVar(&requests, "n", 10000, "Amount of requests")
     flag.IntVar(&timeoutTime, "t", 10, "Timeout in seconds")
     flag.Parse()
@@ -169,7 +170,7 @@ func main() {
     reportInterval = requests / 10
 
     // Use all cores
-    runtime.GOMAXPROCS(256)
+    runtime.GOMAXPROCS(cpuCount)
 
     // Parse conf
     urls = make(map[string]int)
