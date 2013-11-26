@@ -96,7 +96,8 @@ func requester() {
 
 // Progress
 func printProgress() {
-    log.Printf("Finished %d requests", doneCounter)
+    var perc float32 = float32(doneCounter) / float32(requests) * float32(100)
+    log.Printf("Finished %d requests (%3.1f%%)", doneCounter, perc)
 }
 
 // Summary
