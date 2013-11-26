@@ -117,11 +117,27 @@ func parseUrl(url string) string {
 // Url producer
 func urlProducer() {
     go func() {
+        // Calculate total
+        var totalWeight = 0
+        for _,weight := range urls {
+            totalWeight += weight
+        }
+        log.Printf("%d total weight\n", totalWeight)
+
+        // Start populating
         for {
-            // @todo Support weight
-            for url,_ := range urls {
-                urlQueue <- url
-                startCounter++
+            // Spawn urls with regard to weighting
+            for url,weight := range urls {
+                var chance = totalWeight / weight
+                for i := 0; i < chance; i++ {
+                    urlQueue <- url
+                    startCounter++
+
+                    // Stop if we have enough
+                    if startCounter >= requests {
+                        break
+                    }
+                }
             }
             // Stop when we have enough populated
             if startCounter >= requests {
