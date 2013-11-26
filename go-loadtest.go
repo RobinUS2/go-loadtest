@@ -32,6 +32,10 @@ var endTime time.Time
 var elapsedTime time.Duration
 var totalTimeSpend int64
 var totalTimeSpendMux sync.Mutex
+var minTimeSpend int64 = int64(^uint64(0) >> 1) // Max int
+var minTimeSpendMux sync.Mutex
+var maxTimeSpend int64 = -(minTimeSpend - 1) // Min int
+var maxTimeSpendMux sync.Mutex
 
 // Counters
 var startCounter int = int(0)
@@ -84,6 +88,18 @@ func requester() {
             totalTimeSpend += dt
             totalTimeSpendMux.Unlock()
 
+            // Min, max
+            if dt < minTimeSpend {
+                minTimeSpendMux.Lock()
+                minTimeSpend = dt
+                minTimeSpendMux.Unlock()
+            }
+            if dt > maxTimeSpend {
+                maxTimeSpendMux.Lock()
+                maxTimeSpend = dt
+                maxTimeSpendMux.Unlock()
+            }
+
             // Validate error
             if err != nil {
                 // Count error
@@ -129,6 +145,8 @@ func printSummary() {
     log.Printf("Took %s in total", elapsedTime)
     log.Printf("Time per request %f ms (mean)", float64(totalTimeSpend) / float64(requests) / float64(1000000))
     log.Printf("Time per request %f ms (mean, concurrent)", float64(elapsedTime.Nanoseconds()) / float64(requests) / float64(1000000))
+    log.Printf("Time longest request %f ms", float64(maxTimeSpend) / float64(1000000))
+    log.Printf("Time shortest request %f ms", float64(minTimeSpend) / float64(1000000))
     log.Printf("-------------------")
 }
 
