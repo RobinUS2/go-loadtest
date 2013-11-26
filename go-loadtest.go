@@ -27,6 +27,11 @@ var timeoutTime int
 var waitToFinish bool
 var reportInterval int
 var cpuCount int = runtime.NumCPU()
+var startTime time.Time
+var endTime time.Time
+var elapsedTime time.Duration
+var totalTimeSpend int64
+var totalTimeSpendMux sync.Mutex
 
 // Counters
 var startCounter int = int(0)
@@ -67,9 +72,19 @@ func requester() {
             // Prepare url
             url = parseUrl(url)
 
+            // Start timer
+            var timeA time.Time = time.Now()
+
             // Request
-            //log.Println(url)
             resp, err := httpclient.Get(url)
+
+            // Time spend
+            var dt int64 = time.Since(timeA).Nanoseconds()
+            totalTimeSpendMux.Lock()
+            totalTimeSpend += dt
+            totalTimeSpendMux.Unlock()
+
+            // Validate error
             if err != nil {
                 // Count error
                 errorCounterMux.Lock()
@@ -85,11 +100,14 @@ func requester() {
             if doneCounter % reportInterval == 0 {
                 printProgress()
             }
-            doneCounterMux.Unlock()
-
             // Done?
             if waitToFinish && len(urlQueue) == 0 && doneCounter >= startCounter {
+                elapsedTime = time.Since(startTime)
+                endTime = time.Now()
+                doneCounterMux.Unlock()
                 finished <- true
+            } else {
+                doneCounterMux.Unlock()
             }
         }
     }()
@@ -103,10 +121,14 @@ func printProgress() {
 
 // Summary
 func printSummary() {
+    //var dt float64 = float64(endTime.Nanosecond() - startTime.Nanosecond())
     log.Printf("----- SUMMARY -----")
     log.Printf("Total %d requests", doneCounter)
     log.Printf("Successful %d requests", doneCounter - errorCounter)
     log.Printf("Failed %d requests", errorCounter)
+    log.Printf("Took %s in total", elapsedTime)
+    log.Printf("Time per request %f ms (mean)", float64(totalTimeSpend) / float64(requests) / float64(1000000))
+    log.Printf("Time per request %f ms (mean, concurrent)", float64(elapsedTime.Nanoseconds()) / float64(requests) / float64(1000000))
     log.Printf("-------------------")
 }
 
@@ -195,6 +217,7 @@ func main() {
     urlProducer()
 
     // Start requesters
+    startTime = time.Now()
     for i := 0; i < concurrency; i++ {
         requester()
     }
